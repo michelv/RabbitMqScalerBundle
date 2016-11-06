@@ -79,7 +79,7 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
 
             if ($state['messages'] > $threshold && $state['consumers'] < $max) {
                 if ($state['consumers'] == 0) {
-                    $consumersNeeded = $min;
+                    $consumersNeeded = max(1, $min);
                 } else {
                     $consumersNeeded = $max - $state['consumers'];
                 }
