@@ -16,8 +16,8 @@ class Configuration implements ConfigurationInterface
         $rootNode
             ->children()
                 ->booleanNode('debug')->defaultValue('%kernel.debug%')->end()
-                ->integerNode('min_consumers')->defaultValue(1)->end()
-                ->integerNode('max_consumers')->defaultValue(10)->end()
+                ->integerNode('min')->defaultValue(1)->end()
+                ->integerNode('max')->defaultValue(10)->end()
                 ->integerNode('messages')->defaultValue(10)->end()
                 ->integerNode('interval')->defaultValue(10)->end()
                 ->scalarNode('command')->defaultValue('rabbitmq:consumer')->end()

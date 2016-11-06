@@ -24,8 +24,8 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         parent::configure();
 
         $this
-            ->addOption('min_consumers', 'min', InputOption::VALUE_OPTIONAL, 'Minimum number of consumers', null)
-            ->addOption('max_consumers', 'max', InputOption::VALUE_OPTIONAL, 'Maximum number of consumers', null)
+            ->addOption('min', null, InputOption::VALUE_OPTIONAL, 'Minimum number of consumers', null)
+            ->addOption('max', null, InputOption::VALUE_OPTIONAL, 'Maximum number of consumers', null)
             ->addOption('interval', 'i', InputOption::VALUE_OPTIONAL, 'Number of seconds between checks', null)
             ->addOption('command', null, InputOption::VALUE_OPTIONAL, 'Symfony command to run', null)
             ->addOption('prefix', 'p', InputOption::VALUE_OPTIONAL, 'Prefix for the command line', null)
@@ -65,8 +65,8 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
     protected function main()
     {
         $messages = $this->getOption('messages');
-        $min = $this->getOption('min_consumers');
-        $max = $this->getOption('max_consumers');
+        $min = $this->getOption('min');
+        $max = $this->getOption('max');
         $interval = $this->getOption('interval');
 
         do {
@@ -158,8 +158,11 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
     {
         $command = $this->getShellCommand();
 
-        $started_at = time();
-        shell_exec(sprintf('%s 2>&1 & echo $!', $command));
+        $pid = (int) shell_exec(sprintf('%s 2>&1 & echo $!', $command));
+
+        if ($this->debug) {
+            $this->log(sprintf("PID: %d\tCMD: %s", $pid, $command));
+        }
     }
 
     protected function getCurrentQueueState()
