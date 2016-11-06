@@ -10,8 +10,7 @@
     "require": {
         "php":                          ">=5.3.0",
         "php-amqplib/rabbitmq-bundle": "^1.0",
-        "rch/config-access-bundle": "^1.0",
-        "cocur/background-process": "^0.6"
+        "rch/config-access-bundle": "^1.0"
     },
     "require-dev": {
         "symfony/serializer":           "~2.3 || ~3.0",
