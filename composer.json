@@ -4,18 +4,17 @@
     "description": "Provides a command to scale RabbitMq consumers up when the need arises.",
     "keywords": ["symfony2", "rabbitmq", "message", "queue", "amqp"],
     "license": "MIT",
-    "authors": [{
-        "name" : "Michel Valdrighi"
-    }],
+    "authors": [
+        {
+            "name": "Michel Valdrighi",
+            "email": "hello@miche.lv",
+            "homepage": "http://miche.lv"
+        }
+    ],
     "require": {
-        "php":                          ">=5.3.0",
+        "php": ">=5.3.0",
         "php-amqplib/rabbitmq-bundle": "^1.0",
         "rch/config-access-bundle": "^1.0"
-    },
-    "require-dev": {
-        "symfony/serializer":           "~2.3 || ~3.0",
-        "symfony/debug":                "~2.3 || ~3.0",
-        "phpunit/phpunit":              "~4.8 || ~5.0"
     },
     "extra": {
         "branch-alias": {
