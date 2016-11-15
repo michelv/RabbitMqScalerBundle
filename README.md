@@ -41,7 +41,36 @@ public function registerBundles()
 
 ## Configuration ##
 
-None needed out of the box, though you can change the defaults in your configuration file.
+### Queue options ###
+
+The command will regularly query the RabbitMQ server for the state of the queue being consumed.
+For this purpose, it needs to know the exact options that you have set up with php-amqplib's RabbitMqBundle.
+
+For example, with the following configuration:
+
+```yaml
+old_sound_rabbit_mq:
+    ...
+    consumers:
+        upload_picture:
+            connection:       default
+            exchange_options: {name: 'upload-picture', type: direct}
+            queue_options:    {name: 'upload-picture'}
+            callback:         upload_picture_service
+```
+
+You will need to add this configuration:
+
+```yaml
+michelv_rabbit_mq_scaler:
+    consumers:
+        upload_picture:
+            queue_options:    {name: 'upload-picture'}
+```
+
+### Defaults for the command ###
+
+You can change the defaults in your configuration file.
 
 The defaults are defined thusly:
 
@@ -52,11 +81,11 @@ michelv_rabbit_mq_scaler:
     max_consumers: 10
     messages: 10
     interval: 10
+    iterations: 0
     command: 'rabbitmq:consumer'
     prefix: ''
     log: '/dev/null'
     consumer_service_pattern: 'old_sound_rabbit_mq.%s_consumer'
-    queue_options_pattern: 'old_sound_rabbit_mq.consumers.%s.queue_options'
 ```
 
 ## Examples ##
@@ -71,4 +100,10 @@ Default settings, but each consumer must handle at most 50 messages, or quit whe
 
 ```bash
 $ ./app/console michelv:rabbitmq:scaler --messages 50 --memory-limit 100 your_queue
+```
+
+Default settings, but each consumer is niced, and the command will stop after 10 iterations:
+
+```bash
+$ ./app/console michelv:rabbitmq:scaler --prefix 'nice -n 15' --iterations 10 your_queue
 ```
