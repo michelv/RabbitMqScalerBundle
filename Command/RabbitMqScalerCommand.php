@@ -19,6 +19,10 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
     protected $input;
     protected $output;
 
+    /**
+     * Any option or argument defined BaseConsumerCommand will be passed
+     * to the actual workers.
+     */
     protected function configure()
     {
         parent::configure();
@@ -27,14 +31,20 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
             ->addOption('min', null, InputOption::VALUE_OPTIONAL, 'Minimum number of consumers', null)
             ->addOption('max', null, InputOption::VALUE_OPTIONAL, 'Maximum number of consumers', null)
             ->addOption('interval', 'i', InputOption::VALUE_OPTIONAL, 'Number of seconds between checks', null)
+            ->addOption('iterations', null, InputOption::VALUE_OPTIONAL, 'Maximum number of iterations', null)
             ->addOption('command', null, InputOption::VALUE_OPTIONAL, 'Symfony command to run', null)
             ->addOption('prefix', 'p', InputOption::VALUE_OPTIONAL, 'Prefix for the command line', null)
             ->addOption('consumer_service_pattern', null, InputOption::VALUE_OPTIONAL, 'Pattern for the consumer service', null)
-            ->addOption('queue_options_pattern', null, InputOption::VALUE_OPTIONAL, 'Pattern for the queue options', null)
             ->addOption('log', null, InputOption::VALUE_OPTIONAL, 'Full path to a log file for the consumers\' output', null)
             ->setName('michelv:rabbitmq:scaler');
     }
 
+    /**
+     * Initial set up.
+     *
+     * @param InputInterface  $input
+     * @param OutputInterface $output
+     */
     protected function initialize(InputInterface $input, OutputInterface $output)
     {
         parent::initialize($input, $output);
@@ -49,6 +59,14 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         $this->consoleExecutable = (Kernel::VERSION > 3) ? 'bin/console' : 'app/console';
     }
 
+    /**
+     * Executes the command.
+     *
+     * @param InputInterface  $input
+     * @param OutputInterface $output
+     *
+     * @return int
+     */
     protected function execute(InputInterface $input, OutputInterface $output)
     {
         $this->initConsumer($input);
@@ -59,15 +77,24 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
             $output->setVerbosity(OutputInterface::VERBOSITY_DEBUG);
         }
 
-        $this->main();
+        return $this->main();
     }
 
+    /**
+     * Main loop
+     * Here it will either loop as many iterations as requested and return 0,
+     * or loop until you interrupt the command.
+     *
+     * @return int
+     */
     protected function main()
     {
         $messages = $this->getOption('messages');
         $min = $this->getOption('min');
         $max = $this->getOption('max');
         $interval = $this->getOption('interval');
+        $iterations = $this->getOption('iterations');
+        $currentIteration = 1;
 
         do {
             $state = $this->getCurrentQueueState();
@@ -95,10 +122,20 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
                 $this->launchConsumer();
             }
 
+            if ($iterations > 0 && $currentIteration == $iterations) {
+                return 0;
+            }
+
+            ++$currentIteration;
             sleep($interval);
         } while (true);
     }
 
+    /**
+     * Write a message to the output if the command is run with verbosity.
+     *
+     * @param string $message
+     */
     protected function log($message)
     {
         if ($this->output->isVerbose()) {
@@ -106,6 +143,13 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         }
     }
 
+    /**
+     * Get an option's value, or fallback to its default value.
+     *
+     * @param string $name
+     *
+     * @return mixed
+     */
     protected function getOption($name)
     {
         $value = $this->input->getOption($name);
@@ -117,6 +161,11 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         return $value;
     }
 
+    /**
+     * Return the actual shell command that will launch a consumer.
+     *
+     * @return string
+     */
     protected function getShellCommand()
     {
         static $command = null;
@@ -154,6 +203,10 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         return $command;
     }
 
+    /**
+     * Launch a consumer in the background with shell_exec, log the
+     * shell command used and the consumer's PID.
+     */
     protected function launchConsumer()
     {
         $command = $this->getShellCommand();
@@ -165,6 +218,12 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         }
     }
 
+    /**
+     * Get the current state of the queue
+     * Returns an array with keys 'messages' and 'consumers'.
+     *
+     * @return array
+     */
     protected function getCurrentQueueState()
     {
         $queueOptions = $this->getQueueOptions();
@@ -186,20 +245,39 @@ class RabbitMqScalerCommand extends BaseConsumerCommand
         ];
     }
 
+    /**
+     * Get the queue's options as defined in the config file
+     * You need to copy the queue_options for each consumer in order to avoid
+     * undefined behaviour.
+     *
+     * @return array
+     */
     protected function getQueueOptions()
     {
         static $queueOptions = null;
 
         if ($queueOptions === null) {
-            $accessor = $this->getContainer()->get('rch_config_access.accessor');
+            $consumers = $this->defaults['consumers'];
 
-            // get the exact way that the queue was declared on the server
-            $queueOptions = $accessor->get(sprintf($this->getOption('queue_options_pattern'), $this->name));
+            if (empty($consumers)
+                || !isset($consumers[$this->name])
+                || !isset($consumers[$this->name]['queue_options'])
+            ) {
+                throw new \RuntimeException(sprintf('Please copy the queue_options for the queue %s', $this->name));
+            }
+
+            $queueOptions = $consumers[$this->name]['queue_options'];
         }
 
         return $queueOptions;
     }
 
+    /**
+     * Returns the sprintf pattern for the name of the consumer service
+     * This is used internally by BaseConsumerCommand::initConsumer.
+     *
+     * @return string
+     */
     protected function getConsumerService()
     {
         return $this->getOption('consumer_service_pattern');
